@@ -170,12 +170,21 @@
 
   function addMemoryLogic(colorToCells, cellToColor, allCells) {
     let openCell = null;
+    const guessedCells = new Set();
+
     allCells.forEach(cell => cell.addEventListener('click', (e) => {
       const currentCell = e.target;
+      const shouldIgnoreClick = guessedCells.has(currentCell) || currentCell === openCell;
+      if (shouldIgnoreClick) {
+        return;
+      }
+
       if (openCell) {
         const guessed = getColor(openCell) === getColor(currentCell)
         if (guessed) {
           showCell(currentCell);
+          guessedCells.add(currentCell);
+          guessedCells.add(openCell);
           openCell = null;
           if (howManyNotGuessedLeft() === 0) {
             showWinMessage();
