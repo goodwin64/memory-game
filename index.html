@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Memory game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Faker/3.1.0/faker.min.js"
+            integrity="sha512-/seDHxVfh1NvFUscAj8GsHQVZJvr2jjAoYsNL7As2FCaFHUHYIarl3sRCvVlFgyouVNiRgHIebyLKjpgd1SLDw=="
+            crossorigin="anonymous"></script>
+</head>
+<body>
+
+<style>
+    * {
+        transition: all 0.1s ease-in;
+    }
+
+    #game {
+        width: 70vw;
+        height: 70vw;
+        min-width: 480px;
+        min-height: 480px;
+        margin: auto;
+    }
+
+    #game.over {
+        filter: blur(4px);
+    }
+
+    .row {
+        display: flex;
+        justify-content: center;
+    }
+
+    .row:last-child .cell {
+        border-bottom: 1px solid #444;
+    }
+
+    .cell:last-child {
+        border-right: 1px solid #444;
+    }
+
+    .cell {
+        width: 50px;
+        height: 50px;
+        border-top: 1px solid #444;
+        border-left: 1px solid #444;
+    }
+
+    .cell.color-hidden {
+        background-color: #fff !important;
+    }
+
+    #win {
+        font-size: xxx-large;
+        position: absolute;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        text-align: center;
+        padding-top: 40vh;
+    }
+
+    #win:after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+    }
+</style>
+
+<div id="game">
+    <div class="row">
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+    </div>
+    <div class="row">
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+    </div>
+    <div class="row">
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+    </div>
+    <div class="row">
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+    </div>
+</div>
+
+<div id="win" hidden>You win!</div>
+
+<script data-id="helpers">
+  function shuffle(array) {
+    [...array].sort(() => Math.random() - 0.5);
+  }
+
+  function randInt(min = 0, max = 0) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function generateColor() {
+    const [r, g, b] = [
+      randInt(0, 255),
+      randInt(0, 255),
+      randInt(0, 255),
+    ];
+    return `rgb(${r},${g},${b})`;
+  }
+</script>
+
+<script>
+  function generateColors(number) {
+    return new Array(number * number / 2)
+      .fill(0)
+      .map(generateColor);
+  }
+
+  function bindCellsAndColors(colors, allCells) {
+    const shuffledUnusedCells = faker.helpers.shuffle([...allCells]);
+    const colorToCells = colors.reduce((acc, curr) => {
+      const twoRandomCells = [];
+      twoRandomCells.push(shuffledUnusedCells.pop());
+      twoRandomCells.push(shuffledUnusedCells.pop());
+      return {
+        ...acc,
+        [curr]: twoRandomCells,
+      };
+    }, {});
+
+    const cellToColor = allCells.reduce((acc, curr) => {
+      const color = colors.find(color => colorToCells[color].includes(curr));
+      acc.set(curr, color);
+      return acc;
+    }, new Map());
+
+    return {
+      colorToCells,
+      cellToColor,
+    };
+  }
+
+  function getColor(cell) {
+    return cell?.style.backgroundColor;
+  }
+
+  function howManyNotGuessedLeft() {
+    return [...document.querySelectorAll('.color-hidden')].length;
+  }
+
+  function showWinMessage() {
+    document.getElementById('win').removeAttribute('hidden');
+    document.getElementById('game').classList.add('over');
+  }
+
+  function addMemoryLogic(colorToCells, cellToColor, allCells) {
+    let openCell = null;
+    allCells.forEach(cell => cell.addEventListener('click', (e) => {
+      const currentCell = e.target;
+      if (openCell) {
+        const guessed = getColor(openCell) === getColor(currentCell)
+        if (guessed) {
+          showCell(currentCell);
+          openCell = null;
+          if (howManyNotGuessedLeft() === 0) {
+            showWinMessage();
+          }
+        } else {
+          showCell(currentCell);
+          setTimeout(() => {
+            hideCell(currentCell);
+            hideCell(openCell);
+            openCell = null;
+          }, 500);
+        }
+      } else {
+        showCell(currentCell);
+        openCell = currentCell;
+      }
+    }));
+  }
+
+  function paintCells(colorToCells) {
+    Object
+      .entries(colorToCells)
+      .forEach(([color, cells]) => {
+        cells.forEach(cell => cell.style.backgroundColor = color);
+      });
+  }
+
+  function showAllCells(cells) {
+    cells.forEach(cell => cell.classList.remove('color-hidden'));
+  }
+
+  function hideAllCells(cells) {
+    cells.forEach(cell => cell.classList.add('color-hidden'));
+  }
+
+  function showCell(cell) {
+    cell.classList.remove('color-hidden');
+  }
+
+  function hideCell(cell) {
+    cell.classList.add('color-hidden');
+  }
+
+  const colors = generateColors(4);
+  const allCells = [...document.querySelectorAll('.cell')];
+  const { colorToCells, cellToColor } = bindCellsAndColors(colors, allCells);
+
+  paintCells(colorToCells);
+  setTimeout(() => {
+    hideAllCells(allCells);
+  }, 2000);
+  addMemoryLogic(colorToCells, cellToColor, allCells);
+</script>
+
+</body>
+</html>
