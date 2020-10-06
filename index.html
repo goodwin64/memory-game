@@ -14,19 +14,7 @@
 
 <style>
     * {
-        transition: all 0.1s ease-in;
-    }
-
-    #game {
-        width: 70vw;
-        height: 70vw;
-        min-width: 480px;
-        min-height: 480px;
-        margin: auto;
-    }
-
-    #game.over {
-        filter: blur(4px);
+        transition: all 100ms ease-in;
     }
 
     .row {
@@ -34,38 +22,16 @@
         justify-content: center;
     }
 
-    .row:last-child .cell {
-        border-bottom: 1px solid #444;
-    }
-
-    .cell:last-child {
-        border-right: 1px solid #444;
-    }
-
     .cell {
-        width: 50px;
-        height: 50px;
-        border-top: 1px solid #444;
-        border-left: 1px solid #444;
-    }
-
-    .cell.color-hidden {
-        background-color: #fff !important;
+        width: 100px;
+        height: 100px;
+        border: 1px solid;
+        margin: 0 3px 3px 0;
     }
 
     #win {
-        font-size: xxx-large;
-        position: absolute;
-        left: 0;
-        top: 0;
-        right: 0;
-        bottom: 0;
+        font-size: 100px;
         text-align: center;
-        padding-top: 40vh;
-    }
-
-    #win:after {
-        content: "";
         position: absolute;
         left: 0;
         right: 0;
@@ -74,38 +40,36 @@
     }
 </style>
 
-<div id="game">
-    <div class="row">
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell"></div>
-    </div>
-    <div class="row">
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell"></div>
-    </div>
-    <div class="row">
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell"></div>
-    </div>
-    <div class="row">
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell"></div>
-        <div class="cell"></div>
-    </div>
+<div class="row">
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+</div>
+<div class="row">
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+</div>
+<div class="row">
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+</div>
+<div class="row">
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
 </div>
 
 <div id="win" hidden>You win!</div>
 
 <script data-id="helpers">
   function shuffle(array) {
-    [...array].sort(() => Math.random() - 0.5);
+    return [...array].sort(() => Math.random() - 0.5);
   }
 
   function randInt(min = 0, max = 0) {
@@ -125,118 +89,48 @@
 </script>
 
 <script>
-  function generateColors(number) {
-    return new Array(number * number / 2)
+
+  function generateColors(cells) {
+    const shuffledUnusedCells = shuffle(cells);
+    return new Array(cells.length / 2)
       .fill(0)
-      .map(generateColor);
+      .map(generateColor)
+      .reduce((acc, curr) => {
+        const twoCells = [];
+        twoCells.push(shuffledUnusedCells.pop());
+        twoCells.push(shuffledUnusedCells.pop());
+        return {
+          ...acc,
+          [curr]: twoCells,
+        };
+      }, {});
   }
 
-  function bindCellsAndColors(colors, allCells) {
-    const shuffledUnusedCells = faker.helpers.shuffle([...allCells]);
-    const colorToCells = colors.reduce((acc, curr) => {
-      const twoRandomCells = [];
-      twoRandomCells.push(shuffledUnusedCells.pop());
-      twoRandomCells.push(shuffledUnusedCells.pop());
-      return {
-        ...acc,
-        [curr]: twoRandomCells,
-      };
-    }, {});
-
-    const cellToColor = allCells.reduce((acc, curr) => {
-      const color = colors.find(color => colorToCells[color].includes(curr));
-      acc.set(curr, color);
-      return acc;
-    }, new Map());
-
-    return {
-      colorToCells,
-      cellToColor,
-    };
-  }
-
-  function getColor(cell) {
-    return cell?.style.backgroundColor;
-  }
-
-  function howManyNotGuessedLeft() {
-    return [...document.querySelectorAll('.color-hidden')].length;
-  }
-
-  function showWinMessage() {
-    document.getElementById('win').removeAttribute('hidden');
-    document.getElementById('game').classList.add('over');
-  }
-
-  function addMemoryLogic(colorToCells, cellToColor, allCells) {
-    let openCell = null;
-    const guessedCells = new Set();
-
-    allCells.forEach(cell => cell.addEventListener('click', (e) => {
-      const currentCell = e.target;
-      const shouldIgnoreClick = guessedCells.has(currentCell) || currentCell === openCell;
-      if (shouldIgnoreClick) {
-        return;
-      }
-
-      if (openCell) {
-        const guessed = getColor(openCell) === getColor(currentCell)
-        if (guessed) {
-          showCell(currentCell);
-          guessedCells.add(currentCell);
-          guessedCells.add(openCell);
-          openCell = null;
-          if (howManyNotGuessedLeft() === 0) {
-            showWinMessage();
-          }
-        } else {
-          showCell(currentCell);
-          setTimeout(() => {
-            hideCell(currentCell);
-            hideCell(openCell);
-            openCell = null;
-          }, 500);
-        }
-      } else {
-        showCell(currentCell);
-        openCell = currentCell;
-      }
-    }));
-  }
-
-  function paintCells(colorToCells) {
+  function paintAllCells(colors) {
     Object
-      .entries(colorToCells)
+      .entries(colors)
       .forEach(([color, cells]) => {
-        cells.forEach(cell => cell.style.backgroundColor = color);
+        cells.forEach(cell => {
+          cell.style.backgroundColor = color;
+        });
       });
   }
 
-  function showAllCells(cells) {
-    cells.forEach(cell => cell.classList.remove('color-hidden'));
+  function clearAllCells(cells) {
+    cells.forEach(cell => cell.style.backgroundColor = '');
   }
 
-  function hideAllCells(cells) {
-    cells.forEach(cell => cell.classList.add('color-hidden'));
-  }
+  const cells = [...document.querySelectorAll('.cell')];
 
-  function showCell(cell) {
-    cell.classList.remove('color-hidden');
-  }
+  const colors = generateColors(cells);
 
-  function hideCell(cell) {
-    cell.classList.add('color-hidden');
-  }
+  paintAllCells(colors);
 
-  const colors = generateColors(4);
-  const allCells = [...document.querySelectorAll('.cell')];
-  const { colorToCells, cellToColor } = bindCellsAndColors(colors, allCells);
-
-  paintCells(colorToCells);
   setTimeout(() => {
-    hideAllCells(allCells);
+    clearAllCells(cells);
   }, 2000);
-  addMemoryLogic(colorToCells, cellToColor, allCells);
+  // addClickLogic(cells);
+
 </script>
 
 </body>
